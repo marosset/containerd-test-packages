@@ -1,0 +1,91 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Build containerd package
+
+# Controls when the workflow will run
+on:
+
+  workflow_dispatch:
+    inputs:
+      hcsshim_repo:
+        description: 'Repo to build hcsshim from'
+        required: true
+        default: 'Microsoft'
+      hcsshim_branch:
+        description: 'Branch to build hcsshim from'
+        required: true
+        default: master
+      containerd_repo:
+        description: 'Repo to build containerd from'
+        required: true
+        default: 'containerd'
+      containerd_branch:
+        description: 'Branch to build containerd from'
+        required: true
+        default: 'master'
+      package_name:
+        description: 'Branch to build containerd from'
+        required: true
+      
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.5
+
+      - name: Create output folder
+        run: mkdir -p $GITHUB_WORKSPACE/output/bin
+
+      - name: Build hcsshim
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          git clone --branch ${{ github.event.inputs.hcsshim_branch }} https://github.com/${{ github.event.inputs.hcsshim_repo }}/hcsshim.git
+          cd hcsshim
+          go build -o $GITHUB_WORKSPACE/output/bin/containerd-shim-runhcs-v1.exe ./cmd/containerd-shim-runhcs-v1
+          git rev-parse HEAD > $GITHUB_WORKSPACE/output/bin/hcsshim-revision.txt
+          
+      - name: Build containerd
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          git clone --branch ${{ github.event.inputs.containerd_branch }} https://github.com/${{ github.event.inputs.containerd_repo }}/containerd.git
+          cd containerd
+          make binaries
+          cp ./bin/containerd.exe $GITHUB_WORKSPACE/output/bin
+          cp ./bin/ctr.exe $GITHUB_WORKSPACE/output/bin
+          git rev-parse HEAD > $GITHUB_WORKSPACE/output/bin/containerd-revision.txt
+          
+      - name: make windows-containerd zip
+        run: |
+          cd $GITHUB_WORKSPACE/output
+          tar cvf windows-containerd-${{ github.event.inputs.package_name }}.tar.gz bin
+          
+       # sometimes eine/tip@master fails to upload release artifacts and this leaves
+       # a stale tmp file on the release which causes future runs of this workflow to fail.
+      - name: delete tmp.* release artifacts
+        uses: mknejp/delete-release-assets@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: windows-containerd-test-packages
+          fail-if-no-assets: false # do not fail if package does not exist
+          assets: tmp.windows-containerd-${{ github.event.inputs.package_name }}.tar.gz
+
+      - uses: eine/tip@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: windows-containerd-nightly
+          files: |
+            ./output/windows-containerd-${{ github.event.inputs.package_name }}.tar.gz
+          
