@@ -22,7 +22,7 @@ on:
       containerd_branch:
         description: 'Branch to build containerd from'
         required: true
-        default: 'master'
+        default: 'main'
       package_name:
         description: 'Branch to build containerd from'
         required: true
