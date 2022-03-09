@@ -85,7 +85,7 @@ jobs:
       - uses: eine/tip@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: windows-containerd-nightly
+          tag: windows-containerd-test-packages
           files: |
             ./output/windows-containerd-${{ github.event.inputs.package_name }}.tar.gz
           
