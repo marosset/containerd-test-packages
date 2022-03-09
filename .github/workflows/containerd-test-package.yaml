@@ -24,7 +24,7 @@ on:
         required: true
         default: 'main'
       package_name:
-        description: 'Branch to build containerd from'
+        description: 'Name of package'
         required: true
       
 
