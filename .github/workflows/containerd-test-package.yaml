@@ -14,7 +14,7 @@ on:
       hcsshim_branch:
         description: 'Branch to build hcsshim from'
         required: true
-        default: master
+        default: main
       containerd_repo:
         description: 'Repo to build containerd from'
         required: true
